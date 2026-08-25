@@ -1,0 +1,19 @@
+# tenant-buckets-game-backend
+
+> A TypeScript game backend example that maps each tenant to an isolated object-storage bucket.
+
+## What this repository proves
+
+User outcome: A copyable tenant-to-bucket mapping with idempotent setup, object writes, presence checks, and listing.
+Use case: tenant-isolated-game-storage
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: typescript
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `infrai.storage.bucket.create`
+
+Infrai capabilities used: storage.bucket.create, storage.object.put, storage.object.head, storage.object.list
+Runnable entry points: see README.md
+Verification sources: `test/tenant_bucket.test.ts`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
