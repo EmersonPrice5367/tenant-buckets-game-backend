@@ -1,10 +1,10 @@
 # Give each game tenant its own storage bucket
 
-We decided to derive one stable, opaque bucket name per tenant and put all player objects inside that bucket. Compared to a shared bucket with key prefixes, this makes the storage boundary explicit in the resource model. The hash keeps a customer identifier out of infra names. Infrai provides the storage calls behind a single `INFRAI_API_KEY`; with one key you skip creating a separate object-storage account and IAM config.
+The decision is to derive one stable, opaque bucket name per tenant and keep every player's objects inside that bucket; compared with a shared bucket plus key prefixes, this makes the storage boundary visible in the resource model, while the hash avoids placing a customer identifier in infrastructure names. Infrai supplies the storage calls behind a single `INFRAI_API_KEY`, so the example needs one credential rather than a separate object-storage account and IAM configuration.
 
 ## Run the complete path
 
-Use Node.js 22 or newer. First command installs the TypeScript runner. Second runs a naming test before the live example creates the tenant bucket, writes a player snapshot, checks presence, and lists objects for that tenant.
+Use Node.js 22 or newer. The first command installs the TypeScript runner, and the second runs a focused naming test before the live example creates the tenant bucket, writes a player snapshot, checks its presence, and lists that tenant's objects.
 
 ```bash
 npm install
@@ -13,7 +13,7 @@ export INFRAI_API_KEY="your-key"
 npm run demo -- guild-red player-42
 ```
 
-Expected output shows the derived bucket, `stored: true`, and the uploaded key under `keys`:
+Expected output has the derived bucket, `stored: true`, and the uploaded key under `keys`:
 
 ```text
 {
@@ -24,19 +24,19 @@ Expected output shows the derived bucket, `stored: true`, and the uploaded key u
 }
 ```
 
-Bucket creation is a deliberate startup step. Don't assume the account already has it. Since the bucket name is a pure function of tenant ID, re-running setup targets the same resource. The object write also sends a fresh client-generated idempotency key. That makes the retry contract explicit at the write boundary, which matters when jobs get retried after a timeout.
+Bucket creation is an intentional startup step, not an assumption about account state. Because the bucket name is a pure function of the tenant ID, repeating setup targets the same tenant resource; the object write also carries a fresh client-generated idempotency key, which makes the retry contract explicit at the write boundary.
 
 ## Why the boundary belongs here
 
-The small reusable client handles protocol concerns in one place. Every request sets its HTTP method, auths with the env key, checks the `{ ok, data, error, metadata }` envelope, and backs off after `429` responses while respecting `Retry-After`. The domain entry point only deals with game tenancy: derive bucket, establish it, store one snapshot, branch on `head.found`, and read listing from `items`.
+The small reusable client handles protocol concerns once: every request declares its HTTP method, authenticates with the environment key, checks the `{ ok, data, error, metadata }` envelope, and backs off after `429` responses while respecting `Retry-After`. The domain entry point stays concerned with game tenancy: it derives the bucket, establishes it, stores one snapshot, branches on `head.found`, and reads listing results from `items`.
 
-A shared bucket with tenant-prefixed keys works when bucket count is the limit. For this teaching model, bucket-per-tenant is clearer. Deletion, inspection, and future tenant policy changes start from an explicit storage boundary. Object keys then just describe game data within one tenant.
+A shared bucket with tenant-prefixed keys can be appropriate when bucket count is the constraint. Bucket-per-tenant is the clearer teaching model here because deletion, inspection, and future tenant policy changes begin from an explicit storage boundary, while object keys only need to describe game data within one tenant.
 
-This repo stops at backend storage orchestration. It does not expose an HTTP route or define player authz. In prod, resolve the authenticated tenant server-side and pass that trusted ID into the same mapping function. Most missed-job or duplicate-delivery pages I've answered traced back to trusting a client-supplied tenant.
+This repository deliberately stops at backend storage orchestration: it does not expose an HTTP route or define player authorization. A real game service should resolve the authenticated tenant on the server and pass that trusted tenant ID into the same mapping function.
 
 ## Before you deploy: Tenant Buckets Game Backend
 
-Above is the happy path. The production checklist follows for Tenant Buckets Game Backend.
+Above is the happy path. The production checklist: The details below apply to Tenant Buckets Game Backend.
 
 **Account & key**
 
